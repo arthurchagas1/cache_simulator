@@ -14,6 +14,7 @@ def main():
     line_size = int(sys.argv[2])
     group_size = int(sys.argv[3])
     access_file = sys.argv[4]
+    output_file = "saida.txt"
 
     num_lines = cache_size // line_size
     num_sets = num_lines // group_size
@@ -24,7 +25,7 @@ def main():
     fifo_counters = [0] * num_sets  # For tracking FIFO replacement
     hits, misses = 0, 0
 
-    with open(access_file, 'r') as f:
+    with open(access_file, 'r') as f, open(output_file, 'w') as out:
         for line in f:
             # Skip empty lines
             line = line.strip()
@@ -51,14 +52,19 @@ def main():
                 cache[set_index][fifo_index].tag = tag
                 fifo_counters[set_index] = (fifo_index + 1) % group_size
 
-            # Output cache state after each access
-            print("================")
+            # Output cache state after each access to the file
+            out.write("================\n")
+            out.write("IDX V ** ADDR **\n")
             for i, cache_line in enumerate(cache[set_index]):
-                print(f"{i:03d} {cache_line.valid} ** {cache_line.tag:08X}" if cache_line.valid else f"{i:03d} 0")
+                if cache_line.valid:
+                    out.write(f"{i:03d} {cache_line.valid} 0x{cache_line.tag:08X}\n")
+                else:
+                    out.write(f"{i:03d} 0\n")
         
-    # Print hits and misses
-    print(f"#hits: {hits}")
-    print(f"#miss: {misses}")
+    # Write hits and misses to the file
+    with open(output_file, 'a') as out:
+        out.write(f"#hits: {hits}\n")
+        out.write(f"#miss: {misses}\n")
 
 if __name__ == "__main__":
     main()
