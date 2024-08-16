@@ -1,5 +1,5 @@
 Pedro Augusto Torres Bento 2022104352
-Lucas Machado Dayrell 2020035329
+Lucas Dayrell de Andrade Machado 2020035329
 Arthur Rodrigues Chagas 2022069417
 
 Comando para compilar o programa:
