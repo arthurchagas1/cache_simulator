@@ -5,8 +5,11 @@ class CacheLine:
         self.valid = 0
         self.tag = None
 
-def hex_to_tag(addr, line_size):
-    return (addr // line_size) & 0xFFFFFFFF
+def hex_to_tag_and_index(addr, line_size, num_lines):
+    # Cálculo do tag removendo o offset e obtendo o índice da linha diretamente
+    line_index = (addr // line_size) % num_lines
+    tag = addr // line_size
+    return line_index, tag
 
 def main():
     # Parse command-line arguments
@@ -16,52 +19,59 @@ def main():
     access_file = sys.argv[4]
     output_file = "saida.txt"
 
-    num_lines = cache_size // line_size
-    num_sets = num_lines // group_size
+    num_lines = cache_size // line_size  # Número total de linhas na cache
 
-    # Initialize cache as a list of sets, each set containing cache lines
-    cache = [[CacheLine() for _ in range(group_size)] for _ in range(num_sets)]
+    # Inicializa a cache como uma lista de linhas
+    cache = [CacheLine() for _ in range(num_lines)]
 
-    fifo_counters = [0] * num_sets  # For tracking FIFO replacement
+    fifo_counters = [0] * (num_lines // group_size)  # Para rastrear a substituição FIFO por conjunto
     hits, misses = 0, 0
 
     with open(access_file, 'r') as f, open(output_file, 'w') as out:
         for line in f:
-            # Skip empty lines
+            # Ignora linhas vazias
             line = line.strip()
             if not line:
                 continue
 
             address = int(line, 16)
-            tag = hex_to_tag(address, line_size)
-            set_index = (address // line_size) % num_sets
+            line_index, tag = hex_to_tag_and_index(address, line_size, num_lines)
 
-            # Check if the tag is already in the set (hit or miss)
+            # Identifica o conjunto ao qual essa linha pertence
+            set_index = line_index // group_size
+            
             hit = False
-            for cache_line in cache[set_index]:
-                if cache_line.valid and cache_line.tag == tag:
-                    hits += 1
-                    hit = True
-                    break
-
-            if not hit:
+            # Verifica se o tag já está na linha (hit ou miss)
+            if cache[line_index].valid and cache[line_index].tag == tag:
+                hits += 1
+                hit = True
+            elif not hit:
                 misses += 1
-                # Replace line according to FIFO policy
-                fifo_index = fifo_counters[set_index]
-                cache[set_index][fifo_index].valid = 1
-                cache[set_index][fifo_index].tag = tag
-                fifo_counters[set_index] = (fifo_index + 1) % group_size
-
-            # Output cache state after each access to the file
+                if group_size > 1:
+                    # Substituição FIFO dentro do conjunto
+                    fifo_index = fifo_counters[set_index]
+                    cache_line_to_replace = (set_index * group_size) + fifo_index
+                    cache[cache_line_to_replace].valid = 1
+                    cache[cache_line_to_replace].tag = tag
+                    fifo_counters[set_index] = (fifo_index + 1) % group_size
+                else:
+                    # Substituição FIFO global
+                    cache_line_to_replace = fifo_counters.index(min(fifo_counters))
+                    cache[cache_line_to_replace].valid = 1
+                    cache[cache_line_to_replace].tag = tag
+                    fifo_counters[cache_line_to_replace] += 1
+                    
+                            
+            # Saída do estado do cache após cada acesso
             out.write("================\n")
             out.write("IDX V ** ADDR **\n")
-            for i, cache_line in enumerate(cache[set_index]):
+            for i, cache_line in enumerate(cache):
                 if cache_line.valid:
                     out.write(f"{i:03d} {cache_line.valid} 0x{cache_line.tag:08X}\n")
                 else:
                     out.write(f"{i:03d} 0\n")
         
-    # Write hits and misses to the file
+    # Escreve hits e misses no arquivo
     with open(output_file, 'a') as out:
         out.write(f"#hits: {hits}\n")
         out.write(f"#miss: {misses}\n")
