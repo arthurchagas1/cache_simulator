@@ -17,7 +17,7 @@ def main():
     line_size = int(sys.argv[2])
     group_size = int(sys.argv[3])
     access_file = sys.argv[4]
-    output_file = "saida.txt"
+    output_file = "output.txt"
 
     num_lines = cache_size // line_size  # Número total de linhas na cache
 
