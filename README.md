@@ -7,3 +7,5 @@ python3 main.py <cache_size> <line_size> <group_size> <access_file>
 
 exemplo:
 python3 main.py 4096 1024 4 acessos_memoria.txt
+
+A saída é dada em um arquivo chamado "output.txt" 
